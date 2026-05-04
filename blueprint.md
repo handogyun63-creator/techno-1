@@ -1,38 +1,62 @@
 
-# Project Blueprint: Platform for International Students
+# Blueprint: Foreign Student Document Service
 
-## Overview
+## 1. Overview
 
-This document outlines the design and development of a web platform for international students. The platform will provide a central hub for students to access essential information, connect with peers, and navigate their new environment.
+This web application serves as a platform to automate the generation of part-time employment documents for foreign students in Korea. It provides separate portals for employers and students to streamline the process of creating, signing, and managing necessary paperwork like labor contracts and employment confirmations.
 
-## Implemented Features
+## 2. Design and Style Guide
 
-### Initial Version (v1.0)
+- **Layout:** A clean, modern, and responsive two-column layout. The main navigation will allow users to switch between the "Employer" and "Student" sections.
+- **Color Palette:**
+  - Primary: `#3498db` (A professional and calming blue)
+  - Secondary: `#2ecc71` (A friendly and encouraging green)
+  - Accent: `#f1c40f` (A warm and noticeable yellow)
+  - Text: `#333333` (Dark grey for readability)
+  - Background: `#f9f9f9` (A very light grey for a soft, clean look)
+- **Typography:** `Roboto` from Google Fonts for its modern and clean appearance.
+- **Components:**
+  - Cards with soft drop shadows to present information.
+  - Buttons with a subtle glow effect on hover.
+  - Responsive forms for data input.
+  - A navigation bar that is intuitive and easy to use.
 
-*   **Visually Appealing Design:** Modern, clean, and intuitive user interface with a focus on user experience.
-*   **Responsive Layout:** The platform will be accessible and user-friendly across various devices, including desktops, tablets, and smartphones.
-*   **Key Information Hub:** The main page will feature curated sections for essential information, such as:
-    *   **Visa & Immigration:** Guidance and resources for visa applications and renewals.
-    *   **Housing:** Information on dormitories, off-campus housing, and finding accommodation.
-    *   **Academics:** Academic resources, course registration information, and language support.
-    *   **Campus Life:** Information on student clubs, events, and cultural activities.
-*   **Community Forum:** A dedicated space for students to ask questions, share experiences, and connect with peers.
-*   **Event Calendar:** A calendar of upcoming events, workshops, and social gatherings.
+## 3. Features & Implementation Plan
 
-## Current Plan
+### Phase 1: Core Structure (Current Task)
 
-*   **Phase 1: Foundation (In Progress)**
-    *   Develop the basic HTML structure for the main page.
-    *   Create a modern and responsive CSS stylesheet.
-    *   Implement a JavaScript-powered interactive navigation menu.
-    *   Design a visually engaging hero section to welcome users.
-    *   Create information cards for different categories (Visa, Housing, etc.).
+1.  **`index.html`:**
+    *   Set up the main page with a header and a central container.
+    *   Create two primary buttons on the landing page: "For Employers" and "For Students".
+    *   Create hidden container sections for each user type's features.
+    *   **Employer Section (`#employer-view`):**
+        *   A form to post a job opening.
+    *   **Student Section (`#student-view`):**
+        *   A self-assessment checklist for required documents.
+        *   A form to submit personal information for document generation.
+        *   A section to view and electronically sign generated documents.
+2.  **`style.css`:**
+    *   Implement the design guide (colors, fonts).
+    *   Style the main layout, buttons, forms, and cards.
+    *   Add basic responsiveness using media queries.
+3.  **`main.js`:**
+    *   Implement logic to show/hide the employer and student views based on button clicks.
+    *   Define custom elements (`<employer-view>`, `<student-view>`) to encapsulate the functionality for each section.
 
-*   **Phase 2: Community & Events**
-    *   Develop the community forum feature with threads and replies.
-    *   Implement the event calendar with filtering and RSVP functionality.
+### Phase 2: Document Generation (Future)
 
-*   **Phase 3: Personalization**
-    *   Allow users to create profiles and customize their experience.
-    *   Implement a notification system for important updates and events.
+*   Implement a JavaScript library (like `jsPDF`) to generate PDF documents from the student's input data.
+*   Develop templates for:
+    *   Part-time Employment Confirmation
+    *   Labor Contract
+    *   Compliance Confirmation
 
+### Phase 3: Electronic Signatures (Future)
+
+*   Integrate a library (like `signature_pad.js`) to allow students to draw their signatures on a canvas element.
+*   Overlay the signature onto the generated PDF documents.
+
+### Phase 4: Backend & Database (Future)
+
+*   Set up a backend service (e.g., using Firebase Functions) to manage data.
+*   Use a database (e.g., Firestore) to store user information, job postings, and generated documents.

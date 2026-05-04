@@ -1,67 +1,30 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>International Student Hub</title>
+    <title>외국인 유학생 서류 대행 서비스</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
-        <h1>International Student Hub</h1>
-        <nav>
-            <ul>
-                <li><a href="#visa">Visa & Immigration</a></li>
-                <li><a href="#housing">Housing</a></li>
-                <li><a href="#academics">Academics</a></li>
-                <li><a href="#campus-life">Campus Life</a></li>
-                <li><a href="#community">Community</a></li>
-                <li><a href="#events">Events</a></li>
-            </ul>
-        </nav>
+        <h1>외국인 유학생 서류 대행 서비스</h1>
     </header>
 
-    <main>
-        <section id="hero">
-            <h2>Welcome, International Students!</h2>
-            <p>Your one-stop platform for a successful journey.</p>
-        </section>
+    <main id="main-container">
+        <div id="role-selector">
+            <h2>당신은 누구신가요?</h2>
+            <button id="show-employer-view">고용주</button>
+            <button id="show-student-view">유학생</button>
+        </div>
 
-        <section id="info-cards">
-            <div class="card" id="visa">
-                <h3>Visa & Immigration</h3>
-                <p>Everything you need to know about your visa application and status.</p>
-            </div>
-            <div class="card" id="housing">
-                <h3>Housing</h3>
-                <p>Find the perfect place to live, on or off campus.</p>
-            </div>
-            <div class="card" id="academics">
-                <h3>Academics</h3>
-                <p>Resources to help you succeed in your studies.</p>
-            </div>
-            <div class="card" id="campus-life">
-                <h3>Campus Life</h3>
-                <p>Get involved and make the most of your university experience.</p>
-            </div>
-        </section>
+        <employer-view class="hidden"></employer-view>
+        <student-view class="hidden"></student-view>
 
-        <section id="community">
-            <h3>Community Forum</h3>
-            <p>Connect with fellow students, ask questions, and share your experiences.</p>
-        </section>
-
-        <section id="events">
-            <h3>Upcoming Events</h3>
-            <p>Stay up-to-date on workshops, social gatherings, and cultural events.</p>
-        </section>
     </main>
 
-    <footer>
-        <p>&copy; 2023 International Student Hub</p>
-    </footer>
-
-    <script src="main.js"></script>
+    <script src="main.js" type="module"></script>
 </body>
 </html>
