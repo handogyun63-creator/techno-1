@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>K-Student Work Bridge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body { font-family: Inter, Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div id="app"></div>
+
+    <script type="module">
+      import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
+      import JSZip from "https://esm.sh/jszip@3.10.1";
+
+      const employerFieldDefs = [
+        ["companyName", "기업명", "예: ABC F&B"],
+        ["businessNumber", "사업자등록번호", "예: 123-45-67890"],
+        ["managerName", "담당자명", "예: 김민수"],
+        ["managerEmail", "담당자 이메일", "예: hr@company.co.kr"],
+        ["managerPhone", "담당자 연락처", "예: 010-1234-5678"],
+        ["jobTitle", "공고 제목", "예: 외국인 유학생 홀서빙 아르바이트"],
+        ["workType", "근무 형태", "예: 파트타임 / 인턴 / 정규직"],
+        ["industry", "업종", "예: 외식업 / 물류 / 사무보조"],
+        ["workplace", "근무지", "예: 서울 성동구"],
+        ["workAddress", "상세 주소", "예: 서울시 성동구 ○○로 12"],
+        ["salary", "급여", "예: 시급 11,000원"],
+        ["workingHours", "근무 시간", "예: 주 3일 / 18:00~22:00"],
+        ["preferredVisa", "선호 비자/대상", "예: D-2 / D-4-1 / TOPIK 3급 이상"],
+        ["koreanLevel", "요구 한국어 수준", "예: 일상회화 가능"],
+        ["jobDescription", "업무 내용", "예: 주문 접수, 홀 정리, 고객 응대"],
+        ["requiredDocs", "지원 시 제출서류", "예: 이력서, 재학증명서"],
+      ];
+
+      const studentFieldDefs = [
+        ["fullName", "성명", "여권상 영문 포함"],
+        ["nationality", "국적", "예: 베트남"],
+        ["birthDate", "생년월일", "YYYY-MM-DD"],
+        ["gender", "성별", "예: Female / Male"],
+        ["schoolName", "학교명", "예: 한양대학교"],
+        ["department", "학과", "예: 경영학과"],
+        ["studentStatus", "학위과정/학년", "예: 학사 2학년 / 석사 1학기"],
+        ["visaType", "현재 비자", "예: D-2-2 / D-4-1"],
+        ["arcNumber", "외국인등록번호", "예: 123456-1234567"],
+        ["passportNumber", "여권번호", "예: M12345678"],
+        ["topikLevel", "한국어 능력", "예: TOPIK 3급 / KIIP 이수"],
+        ["gpaOrAttendance", "성적/출석 정보", "예: 직전학기 3.5 / 어학과정 출석률 90%"],
+        ["workplaceName", "근무처명", "예: ABC 카페"],
+        ["businessNumber2", "근무처 사업자등록번호", "예: 123-45-67890"],
+        ["employerName", "고용주 성명", "예: 김민수"],
+        ["workplaceAddress", "근무처 주소", "예: 서울시 성동구 ○○로 12"],
+        ["jobDetails", "업무 내용", "예: 홀서빙 및 고객응대"],
+        ["contractPeriod", "근무 예정 기간", "예: 2026-06-01 ~ 2026-08-31"],
+        ["weeklyHours", "주당 근무시간", "예: 주 20시간"],
+        ["hourlyPay", "시급/급여", "예: 시급 11,000원"],
+        ["documentContact", "학교/고용주 연락처", "예: 국제처 02-0000-0000 / 사업장 02-1111-1111"],
+      ];
+
+      const requiredDocs = [
+        "여권 사본",
+        "외국인등록증 사본",
+        "재학증명서 또는 학적 증명",
+        "성적증명서 또는 출석 증빙",
+        "한국어능력 입증서류(TOPIK/KIIP 등)",
+        "근로계약 관련 정보(근무처, 업무내용, 근무시간, 급여)",
+        "학교 확인/추천 관련 서류",
+        "사업자등록증 사본(고용주 제출)",
+        "시간제취업허가 관련 신청 정보",
+        "준수확인서 작성에 필요한 사업장 정보",
+      ];
+
+      const selfCheckQuestions = [
+        ["visa", "현재 D-2 또는 D-4-1/7 등 시간제취업 허가 대상 비자를 보유하고 있나요?"],
+        ["school", "학교 국제처 또는 유학생 담당부서의 확인/추천을 받을 수 있나요?"],
+        ["language", "TOPIK 또는 KIIP 등 한국어능력 증빙이 있나요?"],
+        ["records", "성적 또는 출석률 증빙을 제출할 수 있나요?"],
+        ["job", "근무처명, 사업자등록번호, 주소, 업무내용, 근무시간, 급여가 모두 확정되었나요?"],
+      ];
+
+      const sampleJobs = [
+        { id: 1, title: "외국인 유학생 홀서빙 파트타이머", company: "ABC F&B", location: "서울 성동구", pay: "시급 11,500원", hours: "주 3일 · 17:00~22:00", visa: "D-2 / D-4-1 지원 가능", tags: ["식음료", "초보가능", "주말협의"], description: "주문 접수, 홀 정리, 간단 고객 응대" },
+        { id: 2, title: "물류센터 검수 보조", company: "K-Logis", location: "경기 안산시", pay: "시급 12,000원", hours: "주 2일 · 09:00~18:00", visa: "D-2 지원 가능", tags: ["물류", "단기", "셔틀제공"], description: "입출고 검수, 재고 분류, 패킹 보조" },
+        { id: 3, title: "해외 고객 응대 CS 인턴", company: "Global Bridge", location: "서울 마포구", pay: "월 220만원", hours: "주 5일 · 10:00~17:00", visa: "한국어/영어 가능자", tags: ["사무", "영어우대", "인턴"], description: "해외 고객 문의 대응, 메일 작성, 데이터 정리" },
+      ];
+
+      const notifications = [
+        { title: "학교 제출용 초안 생성 가능", desc: "필수 정보가 대부분 입력되었습니다.", time: "방금 전" },
+        { title: "신규 공고 3건 등록", desc: "D-2 유학생 지원 가능한 공고가 추가되었습니다.", time: "10분 전" },
+        { title: "추가서류 요청", desc: "재학증명서 최신본 업로드가 필요합니다.", time: "1시간 전" },
+      ];
+
+      const initialEmployerForm = Object.fromEntries(employerFieldDefs.map(([key]) => [key, ""]));
+      const initialStudentForm = Object.fromEntries(studentFieldDefs.map(([key]) => [key, ""]));
+      const initialStudentCheck = Object.fromEntries(selfCheckQuestions.map(([key]) => [key, null]));
+
+      const state = {
+        role: "student",
+        language: "KO",
+        studentPage: "dashboard",
+        employerPage: "dashboard",
+        selectedJobId: 1,
+        studentForm: { ...initialStudentForm },
+        employerForm: { ...initialEmployerForm },
+        studentCheck: { ...initialStudentCheck },
+        generatedFiles: [],
+        statusMessage: "",
+      };
+
+      const app = document.getElementById("app");
+
+      const sanitizeFilename = (name) => String(name || "file").replace(/[\\/:*?"<>|]+/g, "_").trim() || "file";
+      const formatFileSize = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+
+      function setState(patch) {
+        Object.assign(state, patch);
+        render();
+      }
+
+      function currentJob() {
+        return sampleJobs.find((job) => job.id === state.selectedJobId) || sampleJobs[0];
+      }
+
+      function checkSummary() {
+        const values = Object.values(state.studentCheck);
+        const yesCount = values.filter(Boolean).length;
+        const noCount = values.filter((v) => v === false).length;
+        if (yesCount === 0 && noCount === 0) return "아직 진단을 시작하지 않았습니다.";
+        if (noCount === 0) return "제출 준비도가 높습니다. 서류 업로드와 신청서 작성 단계로 넘어갈 수 있습니다.";
+        if (yesCount >= 3) return "일부 항목 보완이 필요합니다. 부족한 서류와 고용주 정보를 먼저 확인하세요.";
+        return "사전 준비가 더 필요합니다. 학교 확인과 근무처 정보를 우선 점검하세요.";
+      }
+
+      function registerGeneratedFile(blob, filename, kind) {
+        const file = {
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          name: filename,
+          kind,
+          blob,
+          url: URL.createObjectURL(blob),
+          sizeLabel: formatFileSize(blob.size),
+          createdAt: new Date().toLocaleTimeString(),
+        };
+        state.generatedFiles.unshift(file);
+        render();
+        return file;
+      }
+
+      function removeGeneratedFile(id) {
+        const idx = state.generatedFiles.findIndex((f) => f.id === id);
+        if (idx >= 0) {
+          URL.revokeObjectURL(state.generatedFiles[idx].url);
+          state.generatedFiles.splice(idx, 1);
+          render();
+        }
+      }
+
+      function clearGeneratedFiles() {
+        state.generatedFiles.forEach((f) => URL.revokeObjectURL(f.url));
+        state.generatedFiles = [];
+        render();
+      }
+
+      function downloadGeneratedFile(file) {
+        const a = document.createElement("a");
+        a.href = file.url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      async function buildPdfBlob({ title, sections }) {
+        const doc = new jsPDF({ unit: "mm", format: "a4" });
+        let y = 18;
+
+        const addWrapped = (text, x, currentY, maxWidth, lineHeight = 6) => {
+          const safeText = String(text || "-");
+          const lines = doc.splitTextToSize(safeText, maxWidth);
+          doc.text(lines, x, currentY);
+          return currentY + lines.length * lineHeight;
+        };
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text(title, 14, y);
+        y += 10;
+
+        for (const section of sections) {
+          if (y > 265) {
+            doc.addPage();
+            y = 18;
+          }
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text(section.title, 14, y);
+          y += 6;
+
+          for (const [label, value] of section.items) {
+            if (y > 280) {
+              doc.addPage();
+              y = 18;
+            }
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text(`${label}:`, 14, y);
+            doc.setFont("helvetica", "normal");
+            y = addWrapped(value, 52, y, 140, 6);
+            y += 2;
+          }
+          y += 4;
+        }
+
+        return doc.output("blob");
+      }
+
+      async function buildStudentPdf() {
+        return buildPdfBlob({
+          title: "Student Work Permit Draft",
+          sections: [
+            { title: "Applicant Information", items: studentFieldDefs.slice(0, 12).map(([key, label]) => [label, state.studentForm[key]]) },
+            { title: "Workplace Information", items: studentFieldDefs.slice(12).map(([key, label]) => [label, state.studentForm[key]]) },
+            { title: "Checklist Summary", items: [["Self-check Result", checkSummary()], ["Required Docs", requiredDocs.join(", ")]] },
+          ],
+        });
+      }
+
+      async function buildEmployerPdf() {
+        return buildPdfBlob({
+          title: "Employer Job Posting Draft",
+          sections: [
+            { title: "Company Information", items: employerFieldDefs.slice(0, 5).map(([key, label]) => [label, state.employerForm[key]]) },
+            { title: "Job Information", items: employerFieldDefs.slice(5).map(([key, label]) => [label, state.employerForm[key]]) },
+          ],
+        });
+      }
+
+      async function downloadStudentPdf() {
+        try {
+          const blob = await buildStudentPdf();
+          const filename = `${sanitizeFilename(state.studentForm.fullName || "student")}_work_permit_draft.pdf`;
+          const file = registerGeneratedFile(blob, filename, "pdf");
+          downloadGeneratedFile(file);
+          setState({ statusMessage: "학생 PDF가 생성되었습니다. 아래 생성된 파일 영역에서 다시 받을 수 있습니다." });
+        } catch (error) {
+          console.error(error);
+          setState({ statusMessage: "학생 PDF 생성에 실패했습니다. 브라우저 콘솔을 확인해주세요." });
+        }
+      }
+
+      async function downloadEmployerPdf() {
+        try {
+          const blob = await buildEmployerPdf();
+          const filename = `${sanitizeFilename(state.employerForm.companyName || "employer")}_job_posting.pdf`;
+          const file = registerGeneratedFile(blob, filename, "pdf");
+          downloadGeneratedFile(file);
+          setState({ statusMessage: "고용주 PDF가 생성되었습니다. 아래 생성된 파일 영역에서 다시 받을 수 있습니다." });
+        } catch (error) {
+          console.error(error);
+          setState({ statusMessage: "고용주 PDF 생성에 실패했습니다. 브라우저 콘솔을 확인해주세요." });
+        }
+      }
+
+      async function downloadPackageZip() {
+        try {
+          const [studentBlob, employerBlob] = await Promise.all([buildStudentPdf(), buildEmployerPdf()]);
+          const zip = new JSZip();
+          const studentName = `${sanitizeFilename(state.studentForm.fullName || "student")}_work_permit_draft.pdf`;
+          const employerName = `${sanitizeFilename(state.employerForm.companyName || "employer")}_job_posting.pdf`;
+          zip.file(studentName, studentBlob);
+          zip.file(employerName, employerBlob);
+          zip.file("README.txt", `K-Student Work Bridge document package\n\nIncluded files:\n- ${studentName}\n- ${employerName}`);
+          const zipBlob = await zip.generateAsync({ type: "blob" });
+          const zipName = `${sanitizeFilename(state.studentForm.fullName || state.employerForm.companyName || "document")}_document_package.zip`;
+          const file = registerGeneratedFile(zipBlob, zipName, "zip");
+          downloadGeneratedFile(file);
+          setState({ statusMessage: "문서 패키지 ZIP이 생성되었습니다. 아래 생성된 파일 영역에서 다시 받을 수 있습니다." });
+        } catch (error) {
+          console.error(error);
+          setState({ statusMessage: "ZIP 패키지 생성에 실패했습니다. 브라우저 콘솔을 확인해주세요." });
+        }
+      }
+
+      function sectionTitle(eyebrow, title, desc, actions = "") {
+        return `
+          <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="space-y-2">
+              <div class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-600">${eyebrow}</div>
+              <h2 class="text-2xl md:text-3xl font-bold text-slate-900">${title}</h2>
+              <p class="text-sm md:text-base text-slate-600 leading-7 max-w-3xl">${desc}</p>
+            </div>
+            ${actions}
+          </div>
+        `;
+      }
+
+      function statCard(label, value, tone = "default") {
+        const tones = {
+          default: "bg-white border-slate-200 text-slate-900",
+          emerald: "bg-emerald-50 border-emerald-200 text-emerald-900",
+          slate: "bg-slate-900 border-slate-900 text-white",
+        };
+        return `<div class="rounded-[28px] border p-5 ${tones[tone]}"><div class="text-sm opacity-70">${label}</div><div class="mt-2 text-2xl font-bold">${value}</div></div>`;
+      }
+
+      function generatedFilesPanel() {
+        if (!state.generatedFiles.length) return "";
+        return `
+          <section class="max-w-7xl mx-auto px-6 pt-6 space-y-3">
+            ${state.statusMessage ? `<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">${state.statusMessage}</div>` : ""}
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Generated files", "생성된 파일", "방금 생성된 PDF와 ZIP 파일을 여기서 확인하고 다시 다운로드할 수 있습니다.", state.generatedFiles.length ? `<button data-action="clear-files" class="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">목록 비우기</button>` : "")}
+              <div class="mt-6 space-y-4">
+                ${state.generatedFiles.map(file => `
+                  <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <div class="font-semibold text-slate-900 break-all">${file.name}</div>
+                        <div class="mt-1 text-sm text-slate-500">${file.kind.toUpperCase()} · ${file.sizeLabel} · 생성시각 ${file.createdAt}</div>
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        ${file.kind === "pdf" ? `<a href="${file.url}" target="_blank" rel="noreferrer" class="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">미리보기</a>` : ""}
+                        <button data-download-id="${file.id}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">다운로드</button>
+                        <button data-remove-id="${file.id}" class="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">제거</button>
+                      </div>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          </section>
+        `;
+      }
+
+      function inputGrid(fields, values, prefix) {
+        return `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${fields.map(([key, label, placeholder], idx) => `
+              <label class="block ${idx >= fields.length - 2 ? "md:col-span-2" : ""}">
+                <div class="mb-2 text-sm font-medium text-slate-700">${label}</div>
+                ${label.includes("업무 내용") || label.includes("제출서류")
+                  ? `<textarea data-prefix="${prefix}" data-key="${key}" placeholder="${placeholder}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none min-h-[112px]">${values[key] || ""}</textarea>`
+                  : `<input data-prefix="${prefix}" data-key="${key}" value="${values[key] || ""}" placeholder="${placeholder}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none" />`
+                }
+              </label>
+            `).join("")}
+          </div>
+        `;
+      }
+
+      function studentDashboard() {
+        return `<div class="space-y-8"><div class="grid md:grid-cols-3 gap-4">${statCard("완료된 지원", "2건", "emerald")}${statCard("업로드된 서류", "4개")}${statCard("다음 할 일", "학교 제출 초안", "slate")}</div>${notificationsPanel()}</div>`;
+      }
+
+      function notificationsPanel() {
+        return `<div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">${sectionTitle("Notifications", "알림센터", "학생과 고용주 모두 중요한 진행 상황을 확인할 수 있는 영역입니다.")}
+          <div class="mt-6 space-y-4">${notifications.map(item => `<div class="rounded-3xl border border-slate-200 bg-slate-50 p-5"><div class="flex items-start justify-between gap-4"><div><div class="font-semibold text-slate-900">${item.title}</div><div class="mt-1 text-sm text-slate-600">${item.desc}</div></div><div class="text-xs text-slate-400 whitespace-nowrap">${item.time}</div></div></div>`).join("")}</div></div>`;
+      }
+
+      function studentJobsPage() {
+        const job = currentJob();
+        return `
+          <div class="space-y-8">
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Jobs for students", "유학생용 공고 탐색", "비자와 근무조건에 맞는 공고를 빠르게 찾고, 바로 지원 또는 서류 준비로 연결되는 흐름입니다.", `<button class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">전체 공고 보기</button>`)}
+              <div class="mt-6 flex flex-wrap gap-3">${studentFilters.map(f => `<button class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">${f}</button>`).join("")}</div>
+              <div class="mt-6 grid xl:grid-cols-2 gap-4">
+                ${sampleJobs.map(job => `
+                  <div class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-start justify-between gap-4"><div><div class="text-lg font-bold text-slate-900">${job.title}</div><div class="mt-1 text-sm text-slate-500">${job.company}</div></div><button data-select-job="${job.id}" class="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">상세보기</button></div>
+                    <div class="mt-3 text-sm leading-6 text-slate-600">${job.description}</div>
+                    <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600"><div class="rounded-2xl bg-slate-50 px-3 py-2">📍 ${job.location}</div><div class="rounded-2xl bg-slate-50 px-3 py-2">💰 ${job.pay}</div><div class="rounded-2xl bg-slate-50 px-3 py-2 col-span-2">🕒 ${job.hours}</div><div class="rounded-2xl bg-emerald-50 px-3 py-2 col-span-2 text-emerald-800">🪪 ${job.visa}</div></div>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Job detail", "선택한 공고 상세", "공고 상세 화면과 지원 전 확인해야 할 포인트를 요약한 영역입니다.")}
+              <div class="mt-6 rounded-[28px] border border-slate-200 bg-slate-50 p-6">
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4"><div><div class="text-2xl font-bold text-slate-900">${job.title}</div><div class="mt-1 text-slate-500">${job.company}</div></div><div class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800">추천 공고</div></div>
+                <div class="mt-5 grid md:grid-cols-2 gap-4 text-sm text-slate-700"><div class="rounded-2xl bg-white px-4 py-3">📍 근무지: ${job.location}</div><div class="rounded-2xl bg-white px-4 py-3">💰 급여: ${job.pay}</div><div class="rounded-2xl bg-white px-4 py-3">🕒 근무시간: ${job.hours}</div><div class="rounded-2xl bg-white px-4 py-3">🪪 비자/조건: ${job.visa}</div></div>
+                <div class="mt-5 rounded-2xl bg-white px-4 py-4 text-sm leading-7 text-slate-700">${job.description}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function studentDocumentsPage() {
+        return `
+          <div class="space-y-8">
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Student flow", "시간제취업 서류 준비 자가진단", "유학생이 필요한 서류를 한 번에 확인하고, 현재 신청 준비도를 빠르게 점검할 수 있도록 구성했습니다.")}
+              <div class="mt-8 space-y-4">
+                ${selfCheckQuestions.map(([key, q]) => `
+                  <div class="rounded-3xl border border-slate-200 p-5">
+                    <div class="font-medium leading-7">${q}</div>
+                    <div class="mt-4 flex gap-3">
+                      <button data-check-key="${key}" data-check-value="true" class="rounded-full px-4 py-2 text-sm font-semibold ${state.studentCheck[key] === true ? "bg-emerald-500 text-white" : "bg-emerald-50 text-emerald-700"}">예</button>
+                      <button data-check-key="${key}" data-check-value="false" class="rounded-full px-4 py-2 text-sm font-semibold ${state.studentCheck[key] === false ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-700"}">아니오</button>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="mt-6 rounded-3xl bg-slate-900 text-white p-5"><div class="text-xs uppercase tracking-[0.2em] text-slate-400">Checklist summary</div><div class="mt-2 text-sm text-slate-300">진단 결과</div><div class="mt-2 text-base font-semibold leading-7">${checkSummary()}</div></div>
+            </div>
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">${sectionTitle("Required documents", "필요 서류 한눈에 보기", "시간제취업허가 및 준수확인서 준비 단계에서 자주 요청되는 항목을 먼저 보여주는 영역입니다.")}<div class="mt-6 grid md:grid-cols-2 gap-3"><div class="md:col-span-2 rounded-2xl border border-dashed border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">학교별 요구서류가 다를 수 있으므로 국제처/유학생지원팀 기준으로 최종 확인이 필요합니다.</div>${requiredDocs.map(doc => `<div class="rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-700">${doc}</div>`).join("")}</div></div>
+          </div>
+        `;
+      }
+
+      function studentApplicationsPage() {
+        return `
+          <div class="space-y-8">
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Applications", "지원 현황", "지원한 공고와 현재 진행 상태를 한눈에 확인할 수 있는 화면입니다.", `<button data-action="download-package" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">문서 패키지 ZIP</button>`)}
+              <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200">
+                <div class="grid grid-cols-4 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700"><div>기업</div><div>공고</div><div>상태</div><div>최근 업데이트</div></div>
+                ${studentApplications.map(item => `<div class="grid grid-cols-4 px-5 py-4 text-sm border-t border-slate-200 bg-white text-slate-700"><div class="font-medium text-slate-900">${item.company}</div><div>${item.job}</div><div><span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">${item.status}</span></div><div>${item.updated}</div></div>`).join("")}
+              </div>
+            </div>
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Application form", "유학생 정보 입력", "시간제취업허가서와 준수확인서 작성에 필요한 학생 정보와 사업장 정보를 대신 수집하는 화면입니다.", `<button data-action="download-student-pdf" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">학생 PDF 다운로드</button>`)}
+              <div class="mt-8">${inputGrid(studentFieldDefs, state.studentForm, "student")}</div>
+              <div class="mt-6 flex flex-wrap gap-3"><button class="rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white">서류 정보 저장</button><button data-action="download-student-pdf" class="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">학생 PDF</button><button data-action="download-package" class="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">ZIP 패키지</button></div>
+            </div>
+          </div>
+        `;
+      }
+
+      function employerDashboard() {
+        return `<div class="space-y-8"><div class="grid md:grid-cols-3 gap-4">${statCard("등록 공고", "12건", "emerald")}${statCard("신규 지원자", "34명")}${statCard("서류 요청 대기", "8건", "slate")}</div>${notificationsPanel()}</div>`;
+      }
+
+      function employerApplicantsPage() {
+        return `<div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">${sectionTitle("Applicants", "지원자 관리", "고용주가 지원자 상태를 빠르게 확인하고, 서류 요청이나 다음 단계를 지정하는 화면입니다.")}<div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200"><div class="grid grid-cols-5 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700"><div>지원자</div><div>비자</div><div>학교</div><div>지원 공고</div><div>상태</div></div>${employerApplicants.map(item => `<div class="grid grid-cols-5 px-5 py-4 text-sm border-t border-slate-200 bg-white text-slate-700"><div class="font-medium text-slate-900">${item.name}</div><div>${item.visa}</div><div>${item.school}</div><div>${item.job}</div><div><span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">${item.status}</span></div></div>`).join("")}</div></div>`;
+      }
+
+      function employerJobPostPage() {
+        return `
+          <div class="space-y-8">
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+              ${sectionTitle("Employer dashboard", "고용주 전용 채용공고 등록", "외국인 유학생 대상 채용 공고를 올릴 때 필요한 항목을 먼저 입력하는 화면입니다.", `<button data-action="download-package" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">문서 패키지 ZIP</button>`)}
+              <div class="mt-8 grid lg:grid-cols-[1fr_300px] gap-8"><div>${inputGrid(employerFieldDefs, state.employerForm, "employer")}<div class="mt-6 flex flex-wrap gap-3"><button class="rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white">공고 임시저장</button><button data-action="download-employer-pdf" class="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">공고 PDF</button><button data-action="download-package" class="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">ZIP 패키지</button></div></div><aside class="space-y-4"><div class="rounded-3xl bg-slate-50 p-5 border border-slate-200"><div class="font-semibold">공고 등록 체크포인트</div><ul class="mt-3 space-y-2 text-sm text-slate-600 leading-6"><li>• 사업장 기본정보와 담당자 연락처</li><li>• 근무지, 근무시간, 급여, 업무내용</li><li>• 비자/한국어 수준 등 지원 조건</li><li>• 유학생 서류요청 항목 정리</li></ul></div></aside></div>
+            </div>
+            <div class="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">${sectionTitle("Live preview", "등록 공고 예시", "채용공고가 실제 플랫폼에서 어떻게 보일지를 카드 형태로 보여줍니다.")}<div class="mt-6 grid xl:grid-cols-2 gap-4">${sampleJobs.map(job => `<div class="rounded-[28px] border border-slate-200 bg-slate-50 p-5 shadow-sm"><div class="text-lg font-bold text-slate-900">${job.title}</div><div class="mt-1 text-sm text-slate-500">${job.company}</div><div class="mt-3 text-sm leading-6 text-slate-600">${job.description}</div></div>`).join("")}</div></div>
+          </div>
+        `;
+      }
+
+      function mainContent() {
+        if (state.role === "student") {
+          if (state.studentPage === "dashboard") return studentDashboard();
+          if (state.studentPage === "jobs") return studentJobsPage();
+          if (state.studentPage === "documents") return studentDocumentsPage();
+          return studentApplicationsPage();
+        }
+        if (state.employerPage === "dashboard") return employerDashboard();
+        if (state.employerPage === "post") return employerJobPostPage();
+        return employerApplicantsPage();
+      }
+
+      function render() {
+        app.innerHTML = `
+          <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3"><div class="h-11 w-11 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm">K</div><div><div class="font-bold tracking-tight">K-Student Work Bridge</div><div class="text-xs text-slate-500">외국인 유학생 전용 구인구직·서류지원 프로토타입</div></div></div>
+              <div class="hidden md:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 p-1"><button data-role="employer" class="px-4 py-2 rounded-full text-sm font-medium transition ${state.role === "employer" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}">고용주</button><button data-role="student" class="px-4 py-2 rounded-full text-sm font-medium transition ${state.role === "student" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}">외국인 유학생</button></div>
+              <div class="flex items-center gap-2"><div class="hidden lg:flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 p-1 mr-2">${languageOptions.map(lang => `<button data-language="${lang}" class="px-3 py-1.5 rounded-full text-xs font-semibold ${state.language === lang ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}">${lang}</button>`).join("")}</div><button class="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">로그인</button><button class="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white">회원가입</button></div>
+            </div>
+          </header>
+
+          ${generatedFilesPanel()}
+
+          <main>
+            <section class="max-w-7xl mx-auto px-6 pt-10 pb-8">
+              <div class="grid lg:grid-cols-[1.15fr_0.85fr] gap-8 items-stretch">
+                <div class="rounded-[32px] bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 p-8 md:p-10 text-white shadow-xl">
+                  <div class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide">Cloudflare Direct Upload Ready · ${state.language}</div>
+                  <h1 class="mt-5 text-4xl md:text-5xl font-black leading-tight tracking-tight">외국인 유학생 채용과<br />시간제취업 서류 준비를<br />한 곳에서.</h1>
+                  <p class="mt-5 max-w-2xl text-sm md:text-base leading-7 text-emerald-50">이 버전은 단일 index.html 파일로 동작하도록 바꾼 Cloudflare Pages Direct Upload용 정적 버전입니다.</p>
+                  <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">${statCard("활성 공고 예시", "128", "emerald")}${statCard("문서 출력", "PDF + ZIP")}${statCard("배포 방식", "Single HTML")}</div>
+                </div>
+                <div class="space-y-4">${statCard("회원 유형", "고용주 · 외국인 유학생")}${statCard("핵심 가치", "채용 + 행정서류 연결", "slate")}<div class="rounded-[32px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm"><div class="text-sm font-semibold text-slate-500">배포 메모</div><div class="mt-5 space-y-4"><div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">이 파일 하나를 <span class="font-semibold">index.html</span> 이름으로 저장한 뒤 Cloudflare Pages Direct Upload에 올리면 됩니다.</div><div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">별도 빌드 없이 정적 사이트로 동작합니다.</div></div></div></div>
+              </div>
+            </section>
+
+            <section class="max-w-7xl mx-auto px-6 pb-6">
+              <div class="flex flex-wrap gap-3">
+                ${state.role === "student"
+                  ? `<button data-student-page="dashboard" class="rounded-full px-4 py-2 text-sm font-semibold ${state.studentPage === "dashboard" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">학생 대시보드</button>
+                     <button data-student-page="jobs" class="rounded-full px-4 py-2 text-sm font-semibold ${state.studentPage === "jobs" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">공고 탐색</button>
+                     <button data-student-page="documents" class="rounded-full px-4 py-2 text-sm font-semibold ${state.studentPage === "documents" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">서류 준비</button>
+                     <button data-student-page="applications" class="rounded-full px-4 py-2 text-sm font-semibold ${state.studentPage === "applications" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">지원 현황</button>`
+                  : `<button data-employer-page="dashboard" class="rounded-full px-4 py-2 text-sm font-semibold ${state.employerPage === "dashboard" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">고용주 대시보드</button>
+                     <button data-employer-page="post" class="rounded-full px-4 py-2 text-sm font-semibold ${state.employerPage === "post" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">공고 등록</button>
+                     <button data-employer-page="applicants" class="rounded-full px-4 py-2 text-sm font-semibold ${state.employerPage === "applicants" ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-700"}">지원자 관리</button>`}
+              </div>
+            </section>
+
+            <section class="max-w-7xl mx-auto px-6 pb-16">${mainContent()}</section>
+          </main>
+        `;
+
+        bindEvents();
+      }
+
+      function bindEvents() {
+        document.querySelectorAll("[data-role]").forEach((el) => el.onclick = () => setState({ role: el.dataset.role }));
+        document.querySelectorAll("[data-language]").forEach((el) => el.onclick = () => setState({ language: el.dataset.language }));
+        document.querySelectorAll("[data-student-page]").forEach((el) => el.onclick = () => setState({ studentPage: el.dataset.studentPage }));
+        document.querySelectorAll("[data-employer-page]").forEach((el) => el.onclick = () => setState({ employerPage: el.dataset.employerPage }));
+        document.querySelectorAll("[data-select-job]").forEach((el) => el.onclick = () => setState({ selectedJobId: Number(el.dataset.selectJob) }));
+        document.querySelectorAll("[data-check-key]").forEach((el) => el.onclick = () => {
+          state.studentCheck[el.dataset.checkKey] = el.dataset.checkValue === "true";
+          render();
+        });
+        document.querySelectorAll("[data-prefix][data-key]").forEach((el) => {
+          const handler = (e) => {
+            const target = e.target;
+            const prefix = target.dataset.prefix;
+            const key = target.dataset.key;
+            if (prefix === "student") state.studentForm[key] = target.value;
+            if (prefix === "employer") state.employerForm[key] = target.value;
+          };
+          el.oninput = handler;
+          el.onchange = handler;
+        });
+        document.querySelectorAll("[data-action='download-student-pdf']").forEach((el) => el.onclick = downloadStudentPdf);
+        document.querySelectorAll("[data-action='download-employer-pdf']").forEach((el) => el.onclick = downloadEmployerPdf);
+        document.querySelectorAll("[data-action='download-package']").forEach((el) => el.onclick = downloadPackageZip);
+        document.querySelectorAll("[data-download-id]").forEach((el) => el.onclick = () => {
+          const file = state.generatedFiles.find((f) => f.id === el.dataset.downloadId);
+          if (file) downloadGeneratedFile(file);
+        });
+        document.querySelectorAll("[data-remove-id]").forEach((el) => el.onclick = () => removeGeneratedFile(el.dataset.removeId));
+        document.querySelectorAll("[data-action='clear-files']").forEach((el) => el.onclick = clearGeneratedFiles);
+      }
+
+      render();
+    </script>
+  </body>
+</html>
